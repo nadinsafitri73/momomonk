@@ -105,6 +105,8 @@
   .meta { margin-top: 4px; font-size: 13px; }
   a { color: #e7c27a; text-decoration: none; }
   a:hover { text-decoration: underline; }
+  .title a { color: inherit; }
+  .title a:hover { color: #e7c27a; }
   .badge {
     display: inline-block;
     margin-left: 6px;
@@ -346,7 +348,6 @@ function cardHTML(movie) {
   const link = movie.imdb
     ? `https://www.imdb.com/title/${movie.imdb}/`
     : `https://www.imdb.com/find/?q=${encodeURIComponent(`${movie.label} ${movie.year || ""}`.trim())}`;
-  const linkText = movie.imdb ? movie.imdb : "искать на IMDb";
   const weak = movie.confidence === "weak" ? '<span class="badge">неточно</span>' : "";
   const queued = queue.has(movie.id);
   return `<article class="card${movie.marked ? " marked" : ""}">
@@ -355,10 +356,9 @@ function cardHTML(movie) {
       <div class="votes">${movie.votes ? movie.votes.toLocaleString("ru-RU") : ""}</div>
     </div>
     <div>
-      <div class="title">${esc(movie.label)}${weak}</div>
+      <div class="title"><a href="${link}" target="_blank" rel="noopener">${esc(movie.label)}</a>${weak}</div>
       <div class="sub">${esc(extra.join(" · "))}</div>
       <div class="meta">${esc(meta)}</div>
-      <div class="meta"><a href="${link}" target="_blank" rel="noopener">${linkText}</a></div>
     </div>
     <button type="button" class="queue${queued ? " on" : ""}" data-id="${movie.id}">${queued ? "в очереди" : "к просмотру"}</button>
   </article>`;
