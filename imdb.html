@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Обзоры</title>
+<title>Полка</title>
 <style>
   :root {
     color-scheme: dark;
@@ -14,6 +14,7 @@
     --muted: #9a9186;
     --accent: #e25b45;
     --ok: #d6c07a;
+    --pager: 58px;
   }
   * { box-sizing: border-box; }
   body {
@@ -24,6 +25,7 @@
   }
   header, .bar, main { width: min(1080px, calc(100% - 28px)); margin: 0 auto; }
   header { padding: 22px 0 4px; }
+  .head-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
   h1 { margin: 0; font-size: 28px; font-weight: 650; letter-spacing: -0.03em; }
   #stats { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
   #filters {
@@ -42,9 +44,8 @@
     border-radius: 8px;
   }
   input, select { height: 40px; padding: 0 10px; font-size: 16px; }
-  input[type="search"] { width: 260px; }
+  input[type="search"] { width: 240px; }
   input[type="number"] { width: 96px; }
-  select { min-width: 140px; }
   button { height: 40px; padding: 0 12px; cursor: pointer; }
   button:hover { border-color: #6a6258; }
   button:disabled { opacity: 0.4; cursor: default; }
@@ -84,18 +85,19 @@
   #list { scroll-margin-top: 76px; }
   .card {
     display: grid;
-    grid-template-columns: 64px 1fr auto;
+    grid-template-columns: 72px 1fr auto;
     gap: 4px 16px;
     padding: 14px 2px;
     border-bottom: 1px solid var(--line);
   }
+  .card.marked { box-shadow: inset 3px 0 0 var(--accent); }
   .rate {
     font-size: 26px;
     font-weight: 650;
     letter-spacing: -0.04em;
     font-variant-numeric: tabular-nums;
   }
-  .who { color: var(--muted); font-size: 12px; }
+  .votes { color: var(--muted); font-size: 12px; }
   .title, .sub, .meta { overflow-wrap: break-word; }
   .title { font-size: 17px; }
   .sub, .meta { color: var(--muted); }
@@ -105,6 +107,16 @@
   a:hover { text-decoration: underline; }
   .title a { color: inherit; }
   .title a:hover { color: #e7c27a; }
+  .badge {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 6px;
+    border: 1px solid #6a5438;
+    border-radius: 999px;
+    color: var(--ok);
+    font-size: 11px;
+    vertical-align: 2px;
+  }
   .queue { height: 40px; white-space: nowrap; }
   .queue.on { border-color: var(--ok); color: var(--ok); }
   .more { padding: 18px 0; color: var(--muted); text-align: center; }
@@ -118,9 +130,15 @@
     #filters.open { display: flex; }
     #filters > label { flex: 1 1 100%; }
     #filters > label input, #filters > label select { width: 100%; }
-    .checks { display: flex; width: 100%; }
-    .checks > button { flex: 1 1 auto; }
-    .checks label { flex-direction: row; }
+    .checks {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      width: 100%;
+      align-items: center;
+    }
+    .checks > button { width: 100%; }
+    #export { grid-column: 1 / -1; }
+    .checks label { flex-direction: row; width: auto; }
     .checks input[type="checkbox"] { width: 22px; height: 22px; margin: 0; flex: none; }
     .card { grid-template-columns: 56px 1fr; gap: 6px 12px; padding: 16px 0; }
     .queue { grid-column: 1 / -1; width: 100%; height: 44px; }
@@ -140,22 +158,24 @@
 </head>
 <body>
 <header>
-  <h1>Обзоры</h1>
+  <div class="head-row">
+    <h1>Полка</h1>
+  </div>
   <p id="stats"></p>
 </header>
 <div class="bar">
   <div id="filters">
     <label>поиск
-      <input id="q" type="search" placeholder="название" enterkeyhint="search">
+      <input id="q" type="search" placeholder="название, режиссёр, tt…" enterkeyhint="search">
     </label>
-    <label>оценка от
-      <input id="min" type="number" inputmode="decimal" min="0" max="10" step="0.5" value="7">
+    <label>рейтинг от
+      <input id="min" type="number" inputmode="decimal" min="0" max="10" step="0.1" value="7">
     </label>
     <label>до
-      <input id="max" type="number" inputmode="decimal" min="0" max="10" step="0.5" value="10">
+      <input id="max" type="number" inputmode="decimal" min="0" max="10" step="0.1" value="10">
     </label>
-    <label>автор
-      <select id="author"><option value="">все</option></select>
+    <label>голосов от
+      <input id="votes" type="number" inputmode="numeric" min="0" step="100" value="0">
     </label>
     <label>год от
       <input id="yearFrom" type="number" inputmode="numeric" min="1900" max="2030" step="1">
@@ -163,21 +183,28 @@
     <label>до
       <input id="yearTo" type="number" inputmode="numeric" min="1900" max="2030" step="1">
     </label>
+    <label>жанр
+      <select id="genre"><option value="">все</option></select>
+    </label>
     <label>сортировка
       <select id="sort">
-        <option value="score">оценка</option>
+        <option value="rating">рейтинг</option>
+        <option value="votes">голоса</option>
         <option value="year">год, новые</option>
         <option value="yearAsc">год, старые</option>
         <option value="title">название</option>
-        <option value="author">автор</option>
       </select>
     </label>
     <div class="checks">
       <button type="button" id="p7" class="active">7–10</button>
       <button type="button" id="p8">8–10</button>
       <button type="button" id="pAll">все оценки</button>
+      <button type="button" id="pKnown">7–10, от 5 тыс.</button>
+      <label><input id="exactOnly" type="checkbox"> только точные</label>
       <label><input id="unrated" type="checkbox"> без оценки</label>
+      <label><input id="untranslated" type="checkbox"> без перевода</label>
       <label><input id="queueOnly" type="checkbox"> очередь</label>
+      <button type="button" id="export">скачать список</button>
     </div>
   </div>
   <nav class="pager pager-top" data-pager>
@@ -209,27 +236,38 @@
     <span class="pager-meta" data-meta></span>
   </nav>
 </main>
-<script src="reviews.js"></script>
+<script src="movies.js"></script>
 <script>
 const CHUNK = 30;
-const reviews = (window.REVIEWS || []).map((review) => {
-  const names = [...(review.ru || []), ...(review.en || [])];
-  const hay = [names.join(" "), review.author || "", review.year || ""].join(" ").toLowerCase();
-  return { ...review, hay, label: (review.ru && review.ru[0]) || (review.en && review.en[0]) || "без названия" };
+const movies = (window.MOVIES || []).map((movie) => {
+  const names = [...movie.ru, ...movie.en];
+  const hay = [
+    names.join(" "),
+    movie.director || "",
+    movie.imdbTitle || "",
+    (movie.genres || []).join(" "),
+    movie.year || "",
+    movie.imdb || "",
+    (movie.formats || []).join(" ")
+  ].join(" ").toLowerCase();
+  return { ...movie, hay, label: movie.ru[0] || movie.en[0] || movie.imdbTitle || "без названия" };
 });
-const scoredCount = reviews.filter((review) => review.score != null).length;
-const ge7 = reviews.filter((review) => review.score != null && review.score >= 7 && review.score <= 10).length;
+const ratedCount = movies.filter((movie) => movie.rating != null).length;
+const ge7 = movies.filter((movie) => movie.rating != null && movie.rating >= 7 && movie.rating <= 10).length;
 
-const queue = new Set(JSON.parse(localStorage.getItem("review-queue") || "[]"));
+const queue = new Set(JSON.parse(localStorage.getItem("shelf-queue") || "[]"));
 const state = {
   q: "",
   min: 7,
   max: 10,
-  author: "",
+  votes: 0,
   yearFrom: "",
   yearTo: "",
-  sort: "score",
+  genre: "",
+  sort: "rating",
+  exactOnly: false,
   unrated: false,
+  untranslated: false,
   queueOnly: false,
   page: 0,
   extra: 0
@@ -246,7 +284,7 @@ function esc(value) {
 }
 
 function saveQueue() {
-  localStorage.setItem("review-queue", JSON.stringify([...queue]));
+  localStorage.setItem("shelf-queue", JSON.stringify([...queue]));
 }
 
 function ratingColor(value) {
@@ -257,31 +295,35 @@ function ratingColor(value) {
   return "#d06558";
 }
 
-function formatScore(value) {
-  if (value == null) return "—";
-  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+function displayTitle(movie) {
+  const extra = [...movie.ru, ...movie.en].filter((title) => title !== movie.label);
+  if (movie.imdbTitle && !extra.includes(movie.imdbTitle) && movie.imdbTitle !== movie.label) extra.push(movie.imdbTitle);
+  return extra;
 }
 
-function matches(review) {
-  if (state.q && !state.q.split(/\s+/).filter(Boolean).every((part) => review.hay.includes(part))) return false;
-  if (review.score == null) {
+function matches(movie) {
+  if (state.q && !state.q.split(/\s+/).filter(Boolean).every((part) => movie.hay.includes(part))) return false;
+  if (movie.rating == null) {
     if (!state.unrated) return false;
-  } else if (review.score < state.min || review.score > state.max + 0.001) {
+  } else if (movie.rating < state.min || movie.rating > state.max + 0.001) {
     return false;
   }
-  if (state.author && review.author !== state.author) return false;
-  if (state.yearFrom && (review.year || 0) < Number(state.yearFrom)) return false;
-  if (state.yearTo && (review.year || 9999) > Number(state.yearTo)) return false;
-  if (state.queueOnly && !queue.has(review.id)) return false;
+  if (state.votes && (movie.votes || 0) < state.votes) return false;
+  if (state.yearFrom && (movie.year || 0) < Number(state.yearFrom)) return false;
+  if (state.yearTo && (movie.year || 9999) > Number(state.yearTo)) return false;
+  if (state.genre && !(movie.genres || []).includes(state.genre)) return false;
+  if (state.exactOnly && movie.confidence !== "ok") return false;
+  if (state.untranslated && !movie.noTranslation) return false;
+  if (state.queueOnly && !queue.has(movie.id)) return false;
   return true;
 }
 
 function compare(a, b) {
-  if (state.sort === "year") return (b.year || 0) - (a.year || 0) || (b.score ?? -1) - (a.score ?? -1);
+  if (state.sort === "votes") return (b.votes || 0) - (a.votes || 0);
+  if (state.sort === "year") return (b.year || 0) - (a.year || 0);
   if (state.sort === "yearAsc") return (a.year || 0) - (b.year || 0);
   if (state.sort === "title") return a.label.localeCompare(b.label, "ru");
-  if (state.sort === "author") return (a.author || "").localeCompare(b.author || "", "ru") || (b.score ?? -1) - (a.score ?? -1);
-  return (b.score ?? -1) - (a.score ?? -1) || a.label.localeCompare(b.label, "ru");
+  return (b.rating ?? -1) - (a.rating ?? -1) || (b.votes || 0) - (a.votes || 0);
 }
 
 function endIndex() {
@@ -292,21 +334,33 @@ function pageCount() {
   return Math.max(1, Math.ceil(view.length / CHUNK));
 }
 
-function cardHTML(review) {
-  const extra = [...(review.ru || []), ...(review.en || [])].filter((title) => title !== review.label);
-  const meta = [review.year || "", review.author || "", review.date || ""].filter(Boolean).join(" · ");
-  const queued = queue.has(review.id);
-  return `<article class="card">
+function cardHTML(movie) {
+  const extra = displayTitle(movie);
+  const meta = [
+    movie.year || "",
+    movie.director || "",
+    (movie.formats || []).join(", "),
+    (movie.genres || []).slice(0, 3).join(", "),
+    movie.runtime ? `${movie.runtime} мин` : "",
+    movie.noTranslation ? "без перевода" : ""
+  ].filter(Boolean).join(" · ");
+  const rate = movie.rating == null ? "—" : movie.rating.toFixed(1);
+  const link = movie.imdb
+    ? `https://www.imdb.com/title/${movie.imdb}/`
+    : `https://www.imdb.com/find/?q=${encodeURIComponent(`${movie.label} ${movie.year || ""}`.trim())}`;
+  const weak = movie.confidence === "weak" ? '<span class="badge">неточно</span>' : "";
+  const queued = queue.has(movie.id);
+  return `<article class="card${movie.marked ? " marked" : ""}">
     <div>
-      <div class="rate" style="color:${ratingColor(review.score)}">${formatScore(review.score)}</div>
-      <div class="who">${esc(review.author || "")}</div>
+      <div class="rate" style="color:${ratingColor(movie.rating)}">${rate}</div>
+      <div class="votes">${movie.votes ? movie.votes.toLocaleString("ru-RU") : ""}</div>
     </div>
     <div>
-      <div class="title"><a href="${esc(review.url)}" target="_blank" rel="noopener">${esc(review.label)}</a></div>
+      <div class="title"><a href="${link}" target="_blank" rel="noopener">${esc(movie.label)}</a>${weak}</div>
       <div class="sub">${esc(extra.join(" · "))}</div>
       <div class="meta">${esc(meta)}</div>
     </div>
-    <button type="button" class="queue${queued ? " on" : ""}" data-id="${review.id}">${queued ? "в очереди" : "к просмотру"}</button>
+    <button type="button" class="queue${queued ? " on" : ""}" data-id="${movie.id}">${queued ? "в очереди" : "к просмотру"}</button>
   </article>`;
 }
 
@@ -331,16 +385,17 @@ function paintPagers() {
 }
 
 function paintPresets() {
-  $("p7").classList.toggle("active", state.min === 7 && state.max === 10 && !state.unrated);
-  $("p8").classList.toggle("active", state.min === 8 && state.max === 10 && !state.unrated);
-  $("pAll").classList.toggle("active", state.min === 0 && state.max === 10 && state.unrated);
+  $("p7").classList.toggle("active", state.min === 7 && state.max === 10 && !state.votes && !state.unrated);
+  $("p8").classList.toggle("active", state.min === 8 && state.max === 10 && !state.votes && !state.unrated);
+  $("pAll").classList.toggle("active", state.min === 0 && state.max === 10 && state.unrated && !state.votes);
+  $("pKnown").classList.toggle("active", state.min === 7 && state.max === 10 && state.votes === 5000 && !state.unrated);
 }
 
 function renderList(scrollMode) {
   const start = state.page * CHUNK;
   const slice = view.slice(start, endIndex());
   $("list").innerHTML = slice.length ? slice.map(cardHTML).join("") : '<div class="empty">по этому фильтру пусто</div>';
-  $("stats").textContent = `${reviews.length} обзоров · с оценкой ${scoredCount} · от 7 до 10: ${ge7} · сейчас ${view.length}`;
+  $("stats").textContent = `${movies.length} фильмов · с оценкой ${ratedCount} · от 7 до 10: ${ge7} · сейчас ${view.length}`;
   paintPagers();
   paintPresets();
   if (scrollMode === "top") {
@@ -350,7 +405,7 @@ function renderList(scrollMode) {
 }
 
 function rebuild(scrollMode) {
-  view = reviews.filter(matches).sort(compare);
+  view = movies.filter(matches).sort(compare);
   const pages = pageCount();
   if (state.page >= pages) state.page = pages - 1;
   if (state.page < 0) state.page = 0;
@@ -381,11 +436,14 @@ function readControls() {
   state.min = Number($("min").value || 0);
   state.max = Number($("max").value || 10);
   if (state.min > state.max) [state.min, state.max] = [state.max, state.min];
-  state.author = $("author").value;
+  state.votes = Number($("votes").value || 0);
   state.yearFrom = $("yearFrom").value;
   state.yearTo = $("yearTo").value;
+  state.genre = $("genre").value;
   state.sort = $("sort").value;
+  state.exactOnly = $("exactOnly").checked;
   state.unrated = $("unrated").checked;
+  state.untranslated = $("untranslated").checked;
   state.queueOnly = $("queueOnly").checked;
   state.page = 0;
   state.extra = 0;
@@ -393,33 +451,36 @@ function readControls() {
   rebuild(away ? "top" : undefined);
 }
 
-function setPreset(min, max, unrated) {
+function setPreset(min, max, votes, unrated) {
   state.min = min;
   state.max = max;
+  state.votes = votes;
   state.unrated = unrated;
   $("min").value = min;
   $("max").value = max;
+  $("votes").value = votes;
   $("unrated").checked = unrated;
   state.page = 0;
   state.extra = 0;
   rebuild("top");
 }
 
-const authors = new Set();
-reviews.forEach((review) => { if (review.author) authors.add(review.author); });
-[...authors].sort((a, b) => a.localeCompare(b, "ru")).forEach((author) => {
+const genres = new Set();
+movies.forEach((movie) => (movie.genres || []).forEach((genre) => genres.add(genre)));
+[...genres].sort((a, b) => a.localeCompare(b)).forEach((genre) => {
   const option = document.createElement("option");
-  option.value = author;
-  option.textContent = author;
-  $("author").appendChild(option);
+  option.value = genre;
+  option.textContent = genre;
+  $("genre").appendChild(option);
 });
 
-["q", "min", "max", "author", "yearFrom", "yearTo", "sort", "unrated", "queueOnly"]
+["q", "min", "max", "votes", "yearFrom", "yearTo", "genre", "sort", "exactOnly", "unrated", "untranslated", "queueOnly"]
   .forEach((id) => $(id).addEventListener("input", readControls));
 
-$("p7").onclick = () => setPreset(7, 10, false);
-$("p8").onclick = () => setPreset(8, 10, false);
-$("pAll").onclick = () => setPreset(0, 10, true);
+$("p7").onclick = () => setPreset(7, 10, 0, false);
+$("p8").onclick = () => setPreset(8, 10, 0, false);
+$("pAll").onclick = () => setPreset(0, 10, 0, true);
+$("pKnown").onclick = () => setPreset(7, 10, 5000, false);
 $("filterToggle").onclick = () => {
   $("filters").classList.toggle("open");
   $("filterToggle").classList.toggle("active", $("filters").classList.contains("open"));
@@ -434,7 +495,8 @@ document.body.addEventListener("click", (event) => {
 });
 document.body.addEventListener("change", (event) => {
   if (event.target.dataset.act !== "jump") return;
-  go((Number(event.target.value) || 1) - 1);
+  const page = Number(event.target.value) || 1;
+  go(page - 1);
 });
 
 $("list").onclick = (event) => {
@@ -454,13 +516,27 @@ $("list").onclick = (event) => {
   button.textContent = on ? "в очереди" : "к просмотру";
 };
 
+$("export").onclick = () => {
+  const lines = view.map((movie) => {
+    const link = movie.imdb ? `https://www.imdb.com/title/${movie.imdb}/` : "";
+    return [movie.rating ?? "", movie.year ?? "", movie.label, movie.en[0] || "", link].join("\t");
+  });
+  const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = "polka.txt";
+  anchor.click();
+  URL.revokeObjectURL(url);
+};
+
 const observer = new IntersectionObserver((entries) => {
   if (entries.some((entry) => entry.isIntersecting)) loadMore();
 }, { rootMargin: "700px 0px" });
 observer.observe($("more"));
 
-if (!window.REVIEWS) {
-  $("stats").textContent = "нет reviews.js";
+if (!window.MOVIES) {
+  $("stats").textContent = "нет movies.js — сначала прогони enrich_imdb.py";
 } else {
   rebuild();
 }
